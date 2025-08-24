@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 
 const STORAGE_KEY = 'govjobalert_saved_jobs';
 
 export const useSavedJobs = () => {
   const [savedJobIds, setSavedJobIds] = useState<Set<number>>(new Set());
+  const [isSavedJobsLoaded, setIsSavedJobsLoaded] = useState(false);
 
   useEffect(() => {
     try {
@@ -13,6 +14,8 @@ export const useSavedJobs = () => {
       }
     } catch (error) {
       console.error("Failed to load saved jobs from localStorage", error);
+    } finally {
+        setIsSavedJobsLoaded(true);
     }
   }, []);
 
@@ -35,5 +38,7 @@ export const useSavedJobs = () => {
     });
   }, []);
 
-  return { savedJobIds: Array.from(savedJobIds), toggleSaveJob };
+  const savedJobIdsArray = useMemo(() => Array.from(savedJobIds), [savedJobIds]);
+
+  return { savedJobIds: savedJobIdsArray, toggleSaveJob, isSavedJobsLoaded };
 };

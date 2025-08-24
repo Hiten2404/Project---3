@@ -19,7 +19,7 @@ const HomePage: React.FC = () => {
   const [isJobDetailLoading, setIsJobDetailLoading] = useState<boolean>(false);
   
   const [selectedJob, setSelectedJob] = useState<JobDetailResponse | null>(null);
-  const { savedJobIds, toggleSaveJob } = useSavedJobs();
+  const { savedJobIds, toggleSaveJob, isSavedJobsLoaded } = useSavedJobs();
 
   const [pagination, setPagination] = useState<Pagination>({
     page: 1,
@@ -103,10 +103,10 @@ const HomePage: React.FC = () => {
   }, []);
   
   useEffect(() => {
-    if (!isInitialDataLoading && !selectedJob) {
+    if (!isInitialDataLoading && !selectedJob && isSavedJobsLoaded) {
       fetchJobs(filters, 1);
     }
-  }, [filters, fetchJobs, isInitialDataLoading, selectedJob]);
+  }, [filters, fetchJobs, isInitialDataLoading, selectedJob, isSavedJobsLoaded]);
 
   const handleFilterChange = (newFilters: SearchFiltersType) => {
     setPagination(prev => ({ ...prev, page: 1 }));
@@ -172,13 +172,13 @@ const HomePage: React.FC = () => {
               locations={locations}
               states={states}
               onFiltersChange={handleFilterChange}
-              disabled={isInitialDataLoading}
+              disabled={isInitialDataLoading || !isSavedJobsLoaded}
               initialFilters={initialFilters}
             />
 
             <JobList 
               jobs={jobs} 
-              isLoading={isInitialDataLoading || isJobsLoading} 
+              isLoading={isInitialDataLoading || isJobsLoading || !isSavedJobsLoaded} 
               pagination={pagination}
               onPageChange={handlePageChange}
               savedJobIds={savedJobIds}

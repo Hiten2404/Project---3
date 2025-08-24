@@ -19,6 +19,7 @@ export default async function handler(
 
       const options = {
         ...filters,
+        savedOnly: filters.savedOnly === 'true',
         savedJobIds: savedJobIdsArray,
         page: Number(page),
         limit: Number(limit),

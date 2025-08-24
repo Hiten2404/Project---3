@@ -1,58 +1,57 @@
-import db from './database';
+import { db } from '@/db';
+import { jobs, categories, locations } from '@/db/schema';
+import { eq, and, or, gte, lte, desc, asc, sql, inArray } from 'drizzle-orm';
 import type { Job, Category, Location, SearchFilters, Pagination, JobAPIResponse, JobDetailResponse } from '../types';
 
-export const getJobs = (options: SearchFilters & { page?: number; limit?: number }): JobAPIResponse => {
-  let baseQuery = `SELECT * FROM jobs`;
-  let countQuery = `SELECT count(*) as total FROM jobs`;
-  const whereClauses: string[] = [];
-  const params: (string | number)[] = [];
-
-  const addClause = (field: string, operator: string, value: any) => {
-      whereClauses.push(`${field} ${operator} ?`);
-      params.push(value);
-  }
-
-  if (options.search) {
-      const searchTerm = `%${options.search}%`;
-      whereClauses.push(`(title LIKE ? OR department LIKE ? OR description LIKE ?)`);
-      params.push(searchTerm, searchTerm, searchTerm);
-  }
-  if (options.category) addClause('category', '=', options.category);
-  if (options.state) addClause('state', '=', options.state);
-  if (options.location) addClause('location', '=', options.location);
-  if (options.jobType) addClause('job_type', '=', options.jobType);
-  if (options.salaryMin) addClause('salary_max', '>=', Number(options.salaryMin));
-  if (options.salaryMax) addClause('salary_min', '<=', Number(options.salaryMax));
-
-  if (options.savedOnly && options.savedJobIds && options.savedJobIds.length > 0) {
-    const placeholders = options.savedJobIds.map(() => '?').join(',');
-    whereClauses.push(`id IN (${placeholders})`);
-    params.push(...options.savedJobIds);
-  } else if (options.savedOnly) {
-    whereClauses.push('1=0');
-  }
-
-  if (whereClauses.length > 0) {
-    const whereString = ` WHERE ${whereClauses.join(' AND ')}`;
-    baseQuery += whereString;
-    countQuery += whereString;
-  }
-
-  const totalRow = db.prepare(countQuery).get(...params) as { total: number };
-  const total = totalRow.total;
-
-  const sortBy = options.sortBy || 'posted_date';
-  const sortOrder = options.sortOrder || 'desc';
-  let orderBy = `ORDER BY ${sortBy === 'salary' ? 'salary_max' : sortBy}`;
-  baseQuery += ` ${orderBy} ${sortOrder.toUpperCase()}`;
-  
+export const getJobs = async (options: SearchFilters & { page?: number; limit?: number }): Promise<JobAPIResponse> => {
   const page = options.page || 1;
   const limit = options.limit || 12;
   const offset = (page - 1) * limit;
-  baseQuery += ` LIMIT ? OFFSET ?`;
-  params.push(limit, offset);
+
+  const whereConditions = [];
+  if (options.search) {
+    const searchTerm = `%${options.search}%`;
+    whereConditions.push(or(
+      sql`title LIKE ${searchTerm}`,
+      sql`department LIKE ${searchTerm}`,
+      sql`description LIKE ${searchTerm}`
+    ));
+  }
+  if (options.category) whereConditions.push(eq(jobs.category, options.category));
+  if (options.state) whereConditions.push(eq(jobs.state, options.state));
+  if (options.location) whereConditions.push(eq(jobs.location, options.location));
+  if (options.jobType) whereConditions.push(eq(jobs.jobType, options.jobType));
+  if (options.salaryMin) whereConditions.push(gte(jobs.salaryMax, Number(options.salaryMin)));
+  if (options.salaryMax) whereConditions.push(lte(jobs.salaryMin, Number(options.salaryMax)));
   
-  const jobs = db.prepare(baseQuery).all(...params) as Job[];
+  if (options.savedOnly && options.savedJobIds && options.savedJobIds.length > 0) {
+    whereConditions.push(inArray(jobs.id, options.savedJobIds));
+  } else if (options.savedOnly) {
+     whereConditions.push(sql`1=0`); // Return no results if savedOnly is true but no IDs
+  }
+
+  const finalWhere = whereConditions.length > 0 ? and(...whereConditions) : undefined;
+
+  const totalResult = await db.select({ count: sql<number>`count(*)` }).from(jobs).where(finalWhere);
+  const total = totalResult[0].count;
+  
+  let orderBy;
+  const sortDirection = options.sortOrder === 'asc' ? asc : desc;
+  switch (options.sortBy) {
+    case 'salary':
+      orderBy = sortDirection(jobs.salaryMax);
+      break;
+    case 'deadline':
+      orderBy = sortDirection(jobs.applicationDeadline);
+      break;
+    case 'title':
+      orderBy = sortDirection(jobs.title);
+      break;
+    default:
+      orderBy = sortDirection(jobs.postedDate);
+  }
+
+  const jobResults = await db.select().from(jobs).where(finalWhere).orderBy(orderBy).limit(limit).offset(offset);
 
   const totalPages = Math.ceil(total / limit);
   const pagination: Pagination = {
@@ -61,32 +60,34 @@ export const getJobs = (options: SearchFilters & { page?: number; limit?: number
     hasPrev: page > 1,
   };
 
-  return { jobs, pagination };
+  return { jobs: jobResults as Job[], pagination };
 };
 
-export const getJobById = (id: number): JobDetailResponse => {
-    const jobStmt = db.prepare(`SELECT * FROM jobs WHERE id = ?`);
-    const job = jobStmt.get(id) as Job;
+export const getJobById = async (id: number): Promise<JobDetailResponse> => {
+    const jobResult = await db.select().from(jobs).where(eq(jobs.id, id));
+    const job = jobResult[0] as Job;
 
     if (!job) {
         throw new Error(`Job with id ${id} not found`);
     }
 
-    const relatedJobsStmt = db.prepare(`SELECT * FROM jobs WHERE category = ? AND id != ? ORDER BY posted_date DESC LIMIT 3`);
-    const relatedJobs = relatedJobsStmt.all(job.category, job.id) as Job[];
+    const relatedJobs = await db.select().from(jobs)
+        .where(and(eq(jobs.category, job.category), sql`id != ${job.id}`))
+        .orderBy(desc(jobs.postedDate))
+        .limit(3);
 
-    return { job, relatedJobs };
+    return { job, relatedJobs: relatedJobs as Job[] };
 };
 
-export const getCategories = (): Category[] => {
-  return db.prepare("SELECT * FROM categories ORDER BY name ASC").all() as Category[];
+export const getCategories = async (): Promise<Category[]> => {
+  return await db.select().from(categories).orderBy(asc(categories.name)) as Category[];
 };
 
-export const getLocations = (): Location[] => {
-    return db.prepare("SELECT * FROM locations ORDER BY city ASC").all() as Location[];
+export const getLocations = async (): Promise<Location[]> => {
+    return await db.select().from(locations).orderBy(asc(locations.city)) as Location[];
 };
 
-export const getStates = (): string[] => {
-  const rows = db.prepare("SELECT DISTINCT state FROM locations ORDER BY state ASC").all() as {state: string}[];
+export const getStates = async (): Promise<string[]> => {
+  const rows = await db.selectDistinct({ state: locations.state }).from(locations).orderBy(asc(locations.state));
   return rows.map(row => row.state);
 };
