@@ -48,7 +48,7 @@ export default async function handler(
         const { id, ...updateData } = jobData;
         
         await db.insert(jobs)
-          .values(jobData)
+          .values(jobData as any) // Add type assertion to fix build-time type error
           .onConflictDoUpdate({
             target: jobs.id,
             set: updateData // Use the data without the ID for the update
