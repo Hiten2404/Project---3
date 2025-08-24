@@ -9,7 +9,7 @@ export default defineConfig({
   dialect: 'sqlite',
   schema: './db/schema.ts',
   out: './drizzle',
-  driver: 'turso',
+  driver: 'turso' as any,
   dbCredentials: {
     url: process.env.TURSO_DATABASE_URL,
     authToken: process.env.TURSO_AUTH_TOKEN,

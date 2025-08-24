@@ -44,13 +44,14 @@ export default async function handler(
 
     for (const jobData of incomingJobs) {
       try {
+        // Separate the ID from the rest of the data for the update clause
+        const { id, ...updateData } = jobData;
+        
         await db.insert(jobs)
           .values(jobData)
           .onConflictDoUpdate({
             target: jobs.id,
-            set: {
-              ...jobData,
-            }
+            set: updateData // Use the data without the ID for the update
           });
         
         processedCount++;
