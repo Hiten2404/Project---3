@@ -10,7 +10,6 @@ if (!process.env.TURSO_AUTH_TOKEN) {
 }
 
 export default defineConfig({
-  driver: 'turso',
   dialect: 'sqlite',
   schema: './db/schema.ts',
   out: './drizzle',

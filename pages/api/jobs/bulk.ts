@@ -31,6 +31,12 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  // --- SECURITY CHECK ---
+  const authHeader = req.headers.authorization;
+  if (!process.env.AUTOMATION_SECRET_KEY || authHeader !== `Bearer ${process.env.AUTOMATION_SECRET_KEY}`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
     return res.status(405).end(`Method ${req.method} Not Allowed`);

@@ -9,9 +9,11 @@
     "lint": "next lint",
     "db:push": "drizzle-kit push",
     "db:seed": "node -r esbuild-register ./db/seed.ts",
-    "db:migrate": "node -r esbuild-register ./db/migrate.ts"
+    "db:migrate": "node -r esbuild-register ./db/migrate.ts",
+    "scrape": "node -r esbuild-register ./scripts/scrapeWithAI.ts"
   },
   "dependencies": {
+    "@google/genai": "^0.15.0",
     "@libsql/client": "^0.15.0",
     "drizzle-orm": "^0.32.0",
     "next": "14.2.3",

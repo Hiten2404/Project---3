@@ -10,7 +10,7 @@ To build a comprehensive, data-driven government job portal for India, featuring
 ---
 
 ### **Current Status**
-The application is **feature-complete** and has been successfully migrated to a full-stack Next.js architecture. It is now powered by a live, cloud-based **Turso (libSQL) database** and uses the **Drizzle ORM** for all data operations. All necessary API endpoints for fetching data and bulk importing have been built and secured. The project is ready for deployment and the implementation of its automated data-sourcing pipeline.
+The application is **feature-complete** and architected as a full-stack Next.js application. It is powered by a live, cloud-based **Turso (libSQL) database** and uses the **Drizzle ORM** for all data operations. The final step is to deploy the application and activate the automated AI data-sourcing pipeline using GitHub Actions, which will make the system fully autonomous.
 
 ---
 
@@ -43,7 +43,7 @@ This phase served as a bridge to a full-stack architecture and has been successf
 
 ---
 
-### ✅ **Phase 3: Full Stack Integration & Automation (Completed)**
+### ✅ **Phase 3: Full Stack Integration (Completed)**
 
 The application has been fully migrated to a server-centric architecture using Next.js and a cloud database.
 
@@ -62,33 +62,30 @@ The application has been fully migrated to a server-centric architecture using N
         -   Created a dedicated view to show full details for a single job.
         -   Implemented navigation and data fetching for the detail view, including related jobs.
 
-3.  **Backend Server Development & Automation:**
+3.  **Backend Server Development:**
     - **[x] Create HTTP API Endpoints:** Built all necessary API routes (`GET /api/jobs`, `GET /api/jobs/[id]`, `GET /api/meta`) in the Next.js `pages/api` directory.
-    - **[x] Create Bulk Import API:** Built the `POST /api/jobs/bulk` endpoint to allow for programmatic data insertion.
+    - **[x] Create Bulk Import API:** Built and secured the `POST /api/jobs/bulk` endpoint to allow for programmatic data insertion.
 
 ---
 
-### 🚀 **Next Steps**
+### 🚀 **Phase 4: Deployment & Automation (Final Step)**
 
-The core application is feature-complete. The final step is to build and deploy the automation pipeline.
+The core application is complete. This final phase involves deploying the application and setting up a scheduled task to run the AI scraping script, making the job portal fully autonomous.
 
-1.  **Deploy the GovJobAlert Application:**
+1.  **[ ] Deploy the GovJobAlert Application:**
     -   Host the Next.js application on a platform like **Vercel** to get a live, public URL.
-    -   This is a prerequisite for the automation service to have a target API to send data to.
+    -   Ensure all required environment variables (`TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `AUTOMATION_SECRET_KEY`, `GEMINI_API_KEY`) are configured in the Vercel project settings.
 
-2.  **Set Up the Automation Engine (n8n):**
-    -   Deploy a self-hosted **n8n** instance using a **free 24/7 strategy** on the **Render** cloud platform.
-    -   This involves using a free Render PostgreSQL database for persistent workflow storage and a free Render Web Service to run the n8n application.
-    -   Implement a "keep-alive" service (like Uptime Robot) to ensure the instance runs continuously.
+2.  **[ ] Configure GitHub Actions Secrets:**
+    -   In the project's GitHub repository, navigate to `Settings` > `Secrets and variables` > `Actions`.
+    -   Add the five required secrets (`VERCEL_APP_URL`, `GEMINI_API_KEY`, `AUTOMATION_SECRET_KEY`, `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`) so the automated workflow can access them securely.
 
-3.  **Build the Web Scraping Workflow:**
-    -   Within the deployed n8n instance, build a visual workflow that runs on a daily schedule.
-    -   This workflow will:
-        1.  Fetch HTML from target government job websites.
-        2.  Extract job details (title, department, deadline, etc.).
-        3.  Format the extracted data into the required JSON structure.
-        4.  Send the formatted data to the live application's `POST /api/jobs/bulk` endpoint.
-
-4.  **Launch and Monitor:**
-    -   Activate the workflow and monitor its first few runs to ensure data is being added to the live application correctly.
-    -   Maintain and enhance the application and workflow over time.
+3.  **[ ] Create and Deploy GitHub Actions Workflow:**
+    -   Create a `.github/workflows/scrape-jobs.yml` file in the project root.
+    -   Add the workflow configuration to run the `npm run scrape` command on a daily schedule (e.g., using `cron`).
+    -   Push the new workflow file to the GitHub repository to activate it.
+    
+4.  **[ ] Launch and Monitor:**
+    -   Manually trigger the GitHub Actions workflow for an initial test run.
+    -   Verify that new jobs are successfully scraped and added to the live database.
+    -   Monitor the first few scheduled runs to ensure the autonomous system is working correctly.
