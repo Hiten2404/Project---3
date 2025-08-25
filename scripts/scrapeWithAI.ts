@@ -1,12 +1,13 @@
-import 'dotenv/config';
-import { GoogleGenAI, Type } from "@google/genai";
-import { z } from 'zod';
+// Use require for CommonJS compatibility
+require('dotenv/config');
+const { GoogleGenAI, Type } = require("@google/genai");
+const { z } = require('zod');
 
 // --- Configuration ---
 const TARGET_URL = 'https://www.sarkariresult.com/latestjob/';
 const JOB_ID_REGEX = /\/([\w-]+)\.php$/;
 
-// --- Zod Schema for validation ---
+// --- Zod Schema for local validation ---
 const jobSchema = z.object({
   title: z.string(),
   department: z.string(),
@@ -17,6 +18,22 @@ const responseSchema = z.array(z.object({
   link: z.string().url(),
   ...jobSchema.shape,
 }));
+
+// --- Gemini API Schema for structured output ---
+const geminiResponseSchema = {
+    type: Type.ARRAY,
+    items: {
+        type: Type.OBJECT,
+        properties: {
+            link: { type: Type.STRING, description: 'The full URL to the job detail page.' },
+            title: { type: Type.STRING, description: 'The title of the job.' },
+            department: { type: Type.STRING, description: 'The name of the department or organization posting the job.' },
+            applicationDeadline: { type: Type.STRING, description: 'The last date to apply, in YYYY-MM-DD format if possible.' },
+        },
+        required: ['link', 'title', 'department'],
+    }
+};
+
 
 // --- Main Function ---
 async function main() {
@@ -30,7 +47,7 @@ async function main() {
   }
 
   // 2. Fetch the target website's HTML
-  let htmlContent: string;
+  let htmlContent;
   try {
     console.log(`🌐 Fetching HTML from ${TARGET_URL}...`);
     const response = await fetch(TARGET_URL);
@@ -45,18 +62,14 @@ async function main() {
   }
   
   // 3. Use Gemini AI to extract and structure the data
-  let extractedJobs: z.infer<typeof responseSchema>;
+  let extractedJobs;
   try {
     console.log('🧠 Asking Gemini to analyze and extract job data...');
     const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
     const prompt = `
       You are an expert web scraping assistant. Your task is to analyze the provided HTML content from a job board and extract all job listings.
-      Return the data as a valid JSON array. Each object in the array should represent a single job listing and must conform to the following schema:
-      - link: The full URL to the job detail page.
-      - title: The title of the job.
-      - department: The name of the department or organization posting the job.
-      - applicationDeadline: The last date to apply.
+      Return the data as a valid JSON array that conforms to the provided schema.
 
       Here is the HTML content:
       \`\`\`html
@@ -69,6 +82,7 @@ async function main() {
         contents: prompt,
         config: {
             responseMimeType: "application/json",
+            responseSchema: geminiResponseSchema,
         },
     });
     
@@ -89,6 +103,23 @@ async function main() {
     // Create a numeric hash from the slug
     const id = slug.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 1000000;
 
+    let deadlineISO;
+    if (job.applicationDeadline) {
+        try {
+            // Attempt to parse dates like "DD/MM/YYYY" or other common formats
+            const parts = job.applicationDeadline.split(/[-/]/);
+            if (parts.length === 3) {
+                 // Assuming DD/MM/YYYY
+                deadlineISO = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`).toISOString();
+            } else {
+                deadlineISO = new Date(job.applicationDeadline).toISOString();
+            }
+        } catch(e) {
+            deadlineISO = undefined; // Couldn't parse date
+        }
+    }
+
+
     return {
       id: id,
       title: job.title,
@@ -97,7 +128,7 @@ async function main() {
       location: 'various',
       state: 'various',
       postedDate: new Date().toISOString(),
-      applicationDeadline: job.applicationDeadline ? new Date(job.applicationDeadline).toISOString() : undefined,
+      applicationDeadline: deadlineISO,
       applicationUrl: job.link,
     };
   });
