@@ -1,6 +1,7 @@
+
   // Use require for CommonJS compatibility
   require('dotenv/config');
-  const GoogleGenAI = require("@google/genai").GoogleGenAI;
+  const { GoogleGenAI } = require("@google/genai");
   const { z } = require('zod');
 
   // --- Configuration ---
