@@ -10,7 +10,7 @@
     "db:push": "drizzle-kit push",
     "db:seed": "node -r esbuild-register ./db/seed.ts",
     "db:migrate": "node -r esbuild-register ./db/migrate.ts",
-    "scrape": "esbuild ./scripts/scrapeWithAI.ts --bundle --platform=node --outfile=./scripts/scrape.js && node ./scripts/scrape.js"
+    "scrape": "esbuild ./scripts/scrapeWithAI.ts --bundle --platform=node --external:@google/genai --external:zod --outfile=./scripts/scrape.js && node ./scripts/scrape.js"
   },
   "dependencies": {
     "@google/genai": "^0.15.0",
