@@ -1,6 +1,9 @@
 // Use require for CommonJS compatibility
 require('dotenv/config');
-const { GoogleGenAI, Type } = require("@google/genai");
+// Correctly import from the genai module in a CJS environment
+const genAI = require("@google/genai");
+const GoogleGenAI = genAI.GoogleGenAI;
+const Type = genAI.Type;
 const { z } = require('zod');
 
 // --- Configuration ---
