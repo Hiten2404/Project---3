@@ -10,7 +10,7 @@ To build a comprehensive, data-driven government job portal for India, featuring
 ---
 
 ### **Current Status**
-The application is **feature-complete** and architected as a full-stack Next.js application. It is powered by a live, cloud-based **Turso (libSQL) database** and uses the **Drizzle ORM** for all data operations. The final step is to deploy the application and activate the automated AI data-sourcing pipeline using GitHub Actions, which will make the system fully autonomous.
+The application is **feature-complete** and architected as a full-stack Next.js application. It is powered by a live, cloud-based **Turso (libSQL) database** and uses the **Drizzle ORM** for all data operations. The final step is to deploy the application and activate the automated AI data-sourcing pipeline using **n8n**, which will make the system fully autonomous.
 
 ---
 
@@ -68,24 +68,29 @@ The application has been fully migrated to a server-centric architecture using N
 
 ---
 
-### 🚀 **Phase 4: Deployment & Automation (Final Step)**
+### 🚀 **Phase 4: Deployment & Automation with n8n (Final Step)**
 
-The core application is complete. This final phase involves deploying the application and setting up a scheduled task to run the AI scraping script, making the job portal fully autonomous.
+The core application is complete. This final phase involves deploying the application and setting up a scheduled workflow in n8n to make the job portal fully autonomous.
 
 1.  **[ ] Deploy the GovJobAlert Application:**
     -   Host the Next.js application on a platform like **Vercel** to get a live, public URL.
-    -   Ensure all required environment variables (`TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `AUTOMATION_SECRET_KEY`, `GEMINI_API_KEY`) are configured in the Vercel project settings.
+    -   Configure all required environment variables (`TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `AUTOMATION_SECRET_KEY`, `GEMINI_API_KEY`) in the Vercel project settings.
 
-2.  **[ ] Configure GitHub Actions Secrets:**
-    -   In the project's GitHub repository, navigate to `Settings` > `Secrets and variables` > `Actions`.
-    -   Add the five required secrets (`VERCEL_APP_URL`, `GEMINI_API_KEY`, `AUTOMATION_SECRET_KEY`, `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`) so the automated workflow can access them securely.
+2.  **[ ] Set Up an n8n Instance:**
+    -   Deploy an n8n instance using **n8n Cloud** or a self-hosting provider like **Render** or **Railway**.
+    -   Set an environment variable in the n8n instance: `VERCEL_APP_URL` = (Your live Vercel URL from Step 1).
 
-3.  **[ ] Create and Deploy GitHub Actions Workflow:**
-    -   Create a `.github/workflows/scrape-jobs.yml` file in the project root.
-    -   Add the workflow configuration to run the `npm run scrape` command on a daily schedule (e.g., using `cron`).
-    -   Push the new workflow file to the GitHub repository to activate it.
+3.  **[ ] Configure n8n Credentials:**
+    -   Inside your n8n dashboard, navigate to "Credentials".
+    -   Create a **Google Gemini API** credential using your `GEMINI_API_KEY`.
+    -   Create a **Header Auth** credential for your `AUTOMATION_SECRET_KEY` (Name: `Authorization`, Value: `Bearer your-secret-key`).
+
+4.  **[ ] Import and Activate the Workflow:**
+    -   In n8n, import the `n8n-workflow.json` file from this project.
+    -   Link the workflow nodes to the credentials you just created.
+    -   **Activate** the workflow to enable the daily schedule.
     
-4.  **[ ] Launch and Monitor:**
-    -   Manually trigger the GitHub Actions workflow for an initial test run.
-    -   Verify that new jobs are successfully scraped and added to the live database.
+5.  **[ ] Launch and Monitor:**
+    -   Manually execute the workflow in n8n for an initial test run.
+    -   Verify that new jobs are successfully scraped and appear on your live Vercel site.
     -   Monitor the first few scheduled runs to ensure the autonomous system is working correctly.

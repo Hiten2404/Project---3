@@ -1,0 +1,169 @@
+
+{
+  "name": "GovJobAlert AI Scraper",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "7649d21c-8c76-47b2-b130-1c9f4d2f094f",
+      "name": "Start",
+      "type": "n8n-nodes-base.start",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "triggerTimes": {
+          "itemData": {
+            "mode": "everyDay",
+            "hour": 2
+          }
+        }
+      },
+      "id": "a6372b38-d65e-4c7b-a45e-d67b2d561a07",
+      "name": "Daily Cron",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 2,
+      "position": [
+        40,
+        300
+      ],
+      "webhookId": "9dd15315-7798-43d9-ab7a-d0234ac2c9ab"
+    },
+    {
+      "parameters": {
+        "url": "https://www.sarkariresult.com/latestjob/",
+        "options": {
+          "response": {
+            "response": "string"
+          }
+        }
+      },
+      "id": "e492215c-3729-450f-a2e4-e054457e5e34",
+      "name": "Fetch HTML",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        260,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "model": "gemini-2.5-flash",
+        "text": "=\nYou are an expert web scraping assistant. Your task is to analyze the provided HTML content from a job board and extract all job listings.\nReturn the data as a valid JSON array that conforms to the provided schema.\n\nHere is the HTML content:\n```html\n{{ $json.body }}\n```",
+        "options": {
+          "jsonMode": true,
+          "schema": "{\n  \"type\": \"ARRAY\",\n  \"items\": {\n    \"type\": \"OBJECT\",\n    \"properties\": {\n      \"link\": {\n        \"type\": \"STRING\",\n        \"description\": \"The full URL to the job detail page.\"\n      },\n      \"title\": {\n        \"type\": \"STRING\",\n        \"description\": \"The title of the job.\"\n      },\n      \"department\": {\n        \"type\": \"STRING\",\n        \"description\": \"The name of the department or organization posting the job.\"\n      },\n      \"applicationDeadline\": {\n        \"type\": \"STRING\",\n        \"description\": \"The last date to apply, in YYYY-MM-DD format if possible.\"\n      }\n    },\n    \"required\": [\n      \"link\",\n      \"title\",\n      \"department\"\n    ]\n  }\n}"
+        }
+      },
+      "id": "847124f1-6101-4475-b8a3-2c3f8737359b",
+      "name": "Extract Jobs with Gemini",
+      "type": "n8n-nodes-base.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        480,
+        300
+      ],
+      "credentials": {
+        "googleGeminiApi": {
+          "id": "",
+          "name": ""
+        }
+      }
+    },
+    {
+      "parameters": {
+        "javascriptCode": "const JOB_ID_REGEX = /\\/([\\w-]+)\\.php$/;\nconst geminiOutput = JSON.parse($json.text);\n\nconst formattedJobs = geminiOutput.map(job => {\n  const match = job.link.match(JOB_ID_REGEX);\n  const slug = match ? match[1] : job.link.split('/').pop() || 'unknown';\n  const id = slug.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 1000000;\n\n  let deadlineISO;\n  if (job.applicationDeadline) {\n    try {\n      const parts = job.applicationDeadline.split(/[-/]/);\n      if (parts.length === 3) {\n        // Assuming DD/MM/YYYY\n        deadlineISO = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`).toISOString();\n      } else {\n        deadlineISO = new Date(job.applicationDeadline).toISOString();\n      }\n    } catch(e) {\n      deadlineISO = undefined;\n    }\n  }\n\n  return {\n    id: id,\n    title: job.title,\n    department: job.department,\n    category: 'uncategorized',\n    location: 'various',\n    state: 'various',\n    postedDate: new Date().toISOString(),\n    applicationDeadline: deadlineISO,\n    applicationUrl: job.link,\n  };\n});\n\n// The API expects an object with a 'data' key\nreturn { data: formattedJobs };\n"
+      },
+      "id": "a90757a3-5c7a-42cd-9e87-a89c927f9999",
+      "name": "Format Data for API",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.VERCEL_APP_URL }}/api/jobs/bulk",
+        "authentication": "headerAuth",
+        "sendBody": true,
+        "bodyFormat": "json",
+        "jsonBody": "={{ $json.data }}",
+        "options": {}
+      },
+      "id": "b65103fc-218a-4c23-ac74-b5f7b03dd7f0",
+      "name": "Post to API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        940,
+        300
+      ],
+      "credentials": {
+        "headerAuth": {
+          "id": "",
+          "name": ""
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Daily Cron": {
+      "main": [
+        [
+          {
+            "node": "Fetch HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch HTML": {
+      "main": [
+        [
+          {
+            "node": "Extract Jobs with Gemini",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Jobs with Gemini": {
+      "main": [
+        [
+          {
+            "node": "Format Data for API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Data for API": {
+      "main": [
+        [
+          {
+            "node": "Post to API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "versionId": "f29050d2-dfba-4050-8919-dd773b063625"
+}
