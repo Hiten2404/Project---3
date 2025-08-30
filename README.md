@@ -1,5 +1,4 @@
 <div align="center">
-  <img src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" alt="GovJobAlert Banner" width="100%" />
   <h1>🚀 GovJobAlert: India's Smart Government Job Portal</h1>
   <p>
     <b>AI-powered, fully automated, and beautifully designed.<br>
