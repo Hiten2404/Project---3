@@ -14,7 +14,7 @@
 
 <div align="center">
   <h2>🌐 Live Demo</h2>
-  <a href="https://ai.studio/apps/drive/1B4ALldvoyT2EPdE1XJncFT5rfJ3u9ISV" target="_blank">
+  <a href="https://project-3-omega-sepia.vercel.app/" target="_blank">
     <img src="https://img.shields.io/badge/Launch%20GovJobAlert-Click%20Here-brightgreen?style=for-the-badge" alt="Live Demo" />
   </a>
   <br>
