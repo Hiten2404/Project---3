@@ -49,7 +49,7 @@ GovJobAlert is a next-generation government job portal for India, built to autom
 | Deployment           | 🚀 Ready    | Live demo available, cloud database connected                              |
 
 <div align="center">
-  <img src="https://progress-bar.dev/75/?title=Project%20Completion" alt="Progress Bar" />
+   ██████████████████░░░░░░░░░░
   <br>
   <i>GovJobAlert is well on its way to full autonomy!</i>
 </div>
